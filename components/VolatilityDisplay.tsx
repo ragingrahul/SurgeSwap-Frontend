@@ -6,7 +6,7 @@ import Image from "next/image";
 
 const VolatilityDisplay: React.FC = () => {
   // Get volatility data
-  const { volatility } = useVolatilityEffect();
+  const { volatility, lastPrice, loading, error } = useVolatilityEffect();
 
   return (
     <div className="max-w-4xl mx-auto mb-16">
@@ -21,25 +21,28 @@ const VolatilityDisplay: React.FC = () => {
         </div>
 
         {/* Stylish Volatility Display */}
-        <div className="relative mb-12">
+        <div className="relative mb-10">
           {/* Main Number Container */}
           <div className="relative bg-gradient-to-b from-teal-300/10 to-transparent p-10 rounded-3xl border border-teal-400/20 shadow-2xl backdrop-blur-md">
-            {/* Main Number Display */}
-            <h1 className="text-6xl md:text-8xl font-extrabold text-[#008080] tracking-tight drop-shadow-[0_0_12px_rgba(94,234,212,0.6)]">
-              {volatility ? volatility.toFixed(1) : "0.0"}
-            </h1>
+            {loading ? (
+              <div className="flex items-center justify-center h-20">
+                <div className="animate-pulse h-8 w-32 bg-teal-300/20 rounded"></div>
+              </div>
+            ) : error ? (
+              <div className="text-red-500 font-medium">Data unavailable</div>
+            ) : (
+              <h1 className="text-6xl md:text-8xl font-extrabold text-[#008080] tracking-tight drop-shadow-[0_0_12px_rgba(94,234,212,0.6)]">
+                {volatility ? volatility.toFixed(1) : "0.0"}%
+              </h1>
+            )}
           </div>
         </div>
 
-        {/* Description */}
-        <div className="mb-12">
-          <div className="flex items-center gap-3">
-            <div className="h-[1px] w-12 bg-surge-teal/50"></div>
-            <p className="text-xl text-surge-deep-green/90 font-light tracking-widest uppercase letter-spacing-2">
-              Market Volatility
-            </p>
-            <div className="h-[1px] w-12 bg-surge-teal/50"></div>
-          </div>
+        {/* SOL Price Display */}
+        <div className="mb-8 bg-teal-400/5 px-6 py-3 rounded-xl backdrop-blur-sm">
+          <p className="text-lg text-[#006060] font-medium">
+            Last SOL Price: ${lastPrice ? lastPrice.toFixed(2) : "0.00"} USD
+          </p>
         </div>
 
         {/* Image */}
