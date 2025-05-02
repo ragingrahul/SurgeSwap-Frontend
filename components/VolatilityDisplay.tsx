@@ -8,6 +8,8 @@ const VolatilityDisplay: React.FC = () => {
   // Get volatility data
   const { volatility, lastPrice, loading, error } = useVolatilityEffect();
 
+  console.log(volatility);
+
   return (
     <div className="max-w-4xl mx-auto mb-16">
       <div className="flex flex-col items-center">
@@ -32,7 +34,7 @@ const VolatilityDisplay: React.FC = () => {
               <div className="text-red-500 font-medium">Data unavailable</div>
             ) : (
               <h1 className="text-6xl md:text-8xl font-extrabold text-[#008080] tracking-tight drop-shadow-[0_0_12px_rgba(94,234,212,0.6)]">
-                {volatility ? volatility.toFixed(1) : "0.0"}%
+                {volatility ? volatility.toFixed(2) : "0.00"}%
               </h1>
             )}
           </div>
