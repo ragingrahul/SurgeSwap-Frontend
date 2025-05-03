@@ -73,7 +73,7 @@ const VolatilityDisplay = () => {
                       visible ? "opacity-100" : "opacity-0"
                     }`}
                   >
-                    {displayValue} %
+                    {displayValue}%
                   </span>
                 </div>
                 <div className="absolute -inset-1 bg-gradient-to-r from-[#019e8c]/10 to-[#0AEFFF]/10 blur-lg opacity-50 -z-10 rounded-full"></div>

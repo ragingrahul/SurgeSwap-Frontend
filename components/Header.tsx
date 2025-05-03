@@ -3,14 +3,23 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Menu, X, Wallet } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useWallet } from "@solana/wallet-adapter-react";
+import CustomWalletButton from "./CustomWalletButton";
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { connected } = useWallet();
+  const [mounted, setMounted] = useState(false);
 
-  const navItems = ["Investing", "Cash", "Planning", "About"];
+  // Only render wallet button after component has mounted
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const navItems = ["Variance Swap", "Perp Futures", "About"];
 
   return (
     <header
@@ -62,23 +71,17 @@ const Header = () => {
 
         {/* Right side - Auth buttons */}
         <div className="flex-1 flex items-center justify-end gap-3">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              variant="default"
-              className="relative overflow-hidden bg-[#019E8C] hover:shadow-lg hover:shadow-surge-purple/20 transition-all duration-300 rounded-full text-white font-medium px-5 group"
+          {mounted && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <span className="relative z-10 flex items-center gap-1">
-                <Wallet className="h-4 w-4 animate-pulse" /> Connect Wallet
-              </span>
-              <span className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></span>
-            </Button>
-          </motion.div>
+              <CustomWalletButton />
+            </motion.div>
+          )}
 
           <Button
             variant="ghost"
@@ -114,12 +117,11 @@ const Header = () => {
               </Button>
             ))}
             <div className="pt-2 border-t border-gray-100">
-              <Button
-                variant="default"
-                className="w-full bg-surge-teal hover:bg-surge-light-green text-white"
-              >
-                Sign Up
-              </Button>
+              {mounted && !connected && (
+                <div className="wallet-adapter-button-container">
+                  <CustomWalletButton className="w-full" />
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
