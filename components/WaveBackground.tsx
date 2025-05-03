@@ -37,17 +37,17 @@ const WaveBackground: React.FC = () => {
         {/* Define gradients */}
         <defs>
           <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#27B1A9" />
-            <stop offset="100%" stopColor="#0AEFFF" />
+            <stop offset="0%" stopColor="#019E8C" />
+            <stop offset="100%" stopColor="#97B1AB" />
           </linearGradient>
           <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#164734" />
-            <stop offset="100%" stopColor="#27B1A9" />
+            <stop offset="0%" stopColor="#344B47" />
+            <stop offset="100%" stopColor="#019E8C" />
           </linearGradient>
           <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#0AEFFF" />
-            <stop offset="50%" stopColor="#27B1A9" />
-            <stop offset="100%" stopColor="#0AEFFF" />
+            <stop offset="0%" stopColor="#97B1AB" />
+            <stop offset="50%" stopColor="#B079B5" />
+            <stop offset="100%" stopColor="#7B4780" />
           </linearGradient>
         </defs>
       </svg>
