@@ -1,5 +1,39 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useVolatilityEffect } from "@/hooks/useVolatilityEffect";
+
+const VolatilityDisplay = ({ value }: { value: string }) => {
+  const [visible, setVisible] = useState(false);
+  const [prevValue, setPrevValue] = useState(value);
+
+  useEffect(() => {
+    // When value changes, trigger the fade effect
+    if (value !== prevValue && value !== "Loading...") {
+      setVisible(false);
+      const timer = setTimeout(() => {
+        setPrevValue(value);
+        setVisible(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else if (!visible && value !== "Loading...") {
+      // Initial fade-in
+      const timer = setTimeout(() => {
+        setVisible(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [value, prevValue, visible]);
+
+  return (
+    <span
+      className={`text-white font-bold text-lg transition-opacity duration-500 ${
+        visible ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      {prevValue}
+    </span>
+  );
+};
 
 const CryptoCard = ({
   name,
@@ -8,6 +42,7 @@ const CryptoCard = ({
   change,
   color,
   delay,
+  isVolatility = false,
 }: {
   name: string;
   symbol: string;
@@ -15,6 +50,7 @@ const CryptoCard = ({
   change?: string;
   color: string;
   delay: number;
+  isVolatility?: boolean;
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -46,7 +82,11 @@ const CryptoCard = ({
         <span className="text-white/60 text-xs ml-auto">{symbol}</span>
       </div>
       <div className="flex items-end justify-between">
-        <span className="text-white font-bold text-lg">{price}</span>
+        {isVolatility ? (
+          <VolatilityDisplay value={price} />
+        ) : (
+          <span className="text-white font-bold text-lg">{price}</span>
+        )}
         <div className="flex items-center gap-1">
           <span
             className={`text-xs ${
@@ -63,10 +103,17 @@ const CryptoCard = ({
 
 const PhoneMockup = () => {
   const [loaded, setLoaded] = useState(false);
+  const { volatility, lastPrice, loading } = useVolatilityEffect();
 
   useEffect(() => {
     setLoaded(true);
   }, []);
+
+  const formattedVolatility = loading
+    ? "Loading..."
+    : `${volatility.toFixed(2)}%`;
+
+  const formattedSolPrice = loading ? "Loading..." : `$${lastPrice.toFixed(2)}`;
 
   return (
     <div className="relative h-[480px]">
@@ -92,14 +139,15 @@ const PhoneMockup = () => {
             <CryptoCard
               name="Volatility Index"
               symbol="Vol"
-              price="$1,467.38"
+              price={formattedVolatility}
               color="bg-[#019E8C]/80"
               delay={200}
+              isVolatility={true}
             />
             <CryptoCard
               name="Solana"
               symbol="SOL"
-              price="$148.92"
+              price={formattedSolPrice}
               color="bg-[#B079B5]/80"
               delay={300}
             />

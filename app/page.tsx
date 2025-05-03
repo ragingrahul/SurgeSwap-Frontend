@@ -23,7 +23,7 @@ export default function Home() {
             <div className="flex flex-col items-center justify-start max-w-3xl mx-auto text-center pt-24 md:pt-32 lg:pt-40">
               <VolatilityDisplay />
 
-              <p className="text-base md:text-lg font-semibold text-gray-700 max-w-2xl mx-auto mb-6 md:mb-8 mt-4">
+              <p className="text-base md:text-lg font-semibold text-gray-700 max-w-2xl mx-auto mb-6 md:mb-8 ">
                 Trade volatility directly on Solana with precision instruments.
               </p>
 
