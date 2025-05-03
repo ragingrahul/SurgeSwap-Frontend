@@ -16,8 +16,8 @@ export default function AceButton({
   return (
     <button
       className={cn(
-        "px-6 py-3 h-12 rounded-lg bg-[#008080] text-white font-extrabold relative cursor-pointer shadow-md transition duration-300 ease-in-out inline-flex items-center justify-center gap-2",
-        "hover:bg-[#00a3a3] hover:shadow-lg hover:translate-y-[-2px] border-2 border-[#006666]",
+        "px-6 py-3 h-12 rounded-lg bg-[#019E8C] text-white font-extrabold relative cursor-pointer shadow-md transition duration-300 ease-in-out inline-flex items-center justify-center gap-2",
+        "hover:bg-[#97B1AB] hover:shadow-lg hover:translate-y-[-2px] border-2 border-[#344B47]",
         className
       )}
     >

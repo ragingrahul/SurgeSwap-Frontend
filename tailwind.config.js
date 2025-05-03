@@ -8,10 +8,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "surge-beige": "#f5f5dc", // Light beige color
-        "surge-teal": "#27B1A9",
-        "surge-electric-blue": "#0AEFFF",
-        "surge-deep-green": "#164734",
+        "surge-beige": "#f5f5dc",
+        "surge-teal": "#019E8C",
+        "surge-deep-green": "#344B47",
+        "surge-light-green": "#97B1AB",
+        "surge-purple": "#B079B5",
+        "surge-deep-purple": "#7B4780",
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)"],
@@ -75,11 +77,11 @@ module.exports = {
         "pulse-glow": {
           "0%, 100%": {
             opacity: 0.6,
-            boxShadow: "0 0 20px 0px rgba(14, 165, 233, 0.3)",
+            boxShadow: "0 0 20px 0px rgba(1, 158, 140, 0.3)",
           },
           "50%": {
             opacity: 1,
-            boxShadow: "0 0 40px 10px rgba(14, 165, 233, 0.6)",
+            boxShadow: "0 0 40px 10px rgba(176, 121, 181, 0.6)",
           },
         },
         pulse: {

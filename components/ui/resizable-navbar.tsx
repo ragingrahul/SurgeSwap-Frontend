@@ -217,16 +217,16 @@ export const NavbarButton = ({
   | React.ComponentPropsWithoutRef<"button">
 )) => {
   const baseStyles =
-    "px-4 py-2 rounded-lg bg-white button text-[#008080] text-sm font-bold relative cursor-pointer transition duration-300 ease-in-out inline-block text-center";
+    "px-4 py-2 rounded-lg bg-white button text-[#019E8C] text-sm font-bold relative cursor-pointer transition duration-300 ease-in-out inline-block text-center";
 
   const variantStyles = {
     primary:
-      "bg-[#008080] hover:bg-[#00a3a3] text-white shadow-md hover:shadow-lg hover:translate-y-[-2px]",
+      "bg-[#019E8C] hover:bg-[#97B1AB] text-white shadow-md hover:shadow-lg hover:translate-y-[-2px]",
     secondary:
-      "bg-transparent border border-[#008080] text-[#008080] dark:text-[#00b8ad] hover:bg-[#008080]/10 hover:border-[#00a3a3]",
-    dark: "bg-[#006666] text-[#f5f5dc] shadow-md hover:bg-[#00a3a3] hover:shadow-lg hover:translate-y-[-2px]",
+      "bg-transparent border border-[#019E8C] text-[#019E8C] dark:text-[#97B1AB] hover:bg-[#019E8C]/10 hover:border-[#97B1AB]",
+    dark: "bg-[#344B47] text-[#f5f5dc] shadow-md hover:bg-[#97B1AB] hover:shadow-lg hover:translate-y-[-2px]",
     gradient:
-      "bg-gradient-to-r from-[#008080] to-[#00a3a3] text-white shadow-md hover:shadow-lg hover:from-[#00a3a3] hover:to-[#008080] hover:translate-y-[-2px]",
+      "bg-gradient-to-r from-[#019E8C] to-[#97B1AB] text-white shadow-md hover:shadow-lg hover:from-[#97B1AB] hover:to-[#B079B5] hover:translate-y-[-2px]",
   };
 
   return (

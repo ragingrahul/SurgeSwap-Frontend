@@ -2,7 +2,7 @@
 
 :root {
   --background: #f5f5dc; /* Light beige */
-  --foreground: #171717;
+  --foreground: #344B47; /* Updated text color to deep green */
 }
 
 @theme inline {
@@ -15,7 +15,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #f5f5dc; /* Keep light beige even in dark mode */
-    --foreground: #171717;
+    --foreground: #344B47; /* Updated text color to deep green */
   }
 }
 

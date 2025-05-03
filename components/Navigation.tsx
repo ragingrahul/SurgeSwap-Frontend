@@ -27,7 +27,7 @@ const Navigation = () => {
         </a>
         <a
           href="#docs"
-          className="text-surge-deep-green hover:text-surge-teal transition-colors font-medium"
+          className="text-surge-deep-green hover:text-surge-purple transition-colors font-medium"
         >
           <span className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -36,7 +36,7 @@ const Navigation = () => {
         </a>
         <a
           href="#community"
-          className="text-surge-deep-green hover:text-surge-teal transition-colors font-medium"
+          className="text-surge-deep-green hover:text-surge-purple transition-colors font-medium"
         >
           <span className="flex items-center gap-2">
             <Users className="h-4 w-4" />

@@ -25,9 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-surge-beige text-[#171717]`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-surge-beige text-[#344B47]`}
       >
-        <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,rgba(0,143,133,0.07),transparent_70%)] pointer-events-none z-0"></div>
+        <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,rgba(1,158,140,0.07),transparent_70%)] pointer-events-none z-0"></div>
         {children}
       </body>
     </html>
