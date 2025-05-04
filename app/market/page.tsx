@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,15 +13,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Coins,
-  FileText,
-  ExternalLink,
   Activity,
   TrendingUp,
   Zap,
+  AlertTriangle,
+  Check,
+  Calendar,
 } from "lucide-react";
+import { fetchAllMarkets, formatDeposits } from "@/lib/marketUtils";
 
-// Market type definition
+// Market type definition for display
 interface Market {
   id: string;
   name: string;
@@ -34,26 +35,109 @@ interface Market {
   strategy: string;
   hasBoost?: boolean;
   icons: string[];
+  timestamp?: number;
+  strike?: number;
+  isExpired?: boolean;
+  epoch?: string;
 }
 
 const Markets = () => {
-  // Sample market data
-  const markets: Market[] = [
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadMarkets = async () => {
+      try {
+        setIsLoading(true);
+        const marketData = await fetchAllMarkets();
+
+        console.log("Loaded markets:", marketData);
+
+        // Convert market data to display format
+        const formattedMarkets = marketData.map((market) => {
+          // Generate a market name based on the strike value and timestamp
+          const strikeValue = market.strike * 100;
+
+          // Parse epoch (it's a string in the data) to number for date calculation
+          const epochNum = parseInt(market.epoch, 10);
+          const expiryDate = new Date(epochNum * 1000);
+          console.log("Expiry date:", expiryDate);
+
+          // Format date in financial standard format with day (DD-MMM-YY)
+          const monthNames = [
+            "JAN",
+            "FEB",
+            "MAR",
+            "APR",
+            "MAY",
+            "JUN",
+            "JUL",
+            "AUG",
+            "SEP",
+            "OCT",
+            "NOV",
+            "DEC",
+          ];
+          const day = expiryDate.getDate().toString().padStart(2, "0"); // Ensure 2 digits with leading zero
+          const month = monthNames[expiryDate.getMonth()];
+          const year = expiryDate.getFullYear().toString().slice(2); // Just take last 2 digits
+
+          // Create a standard derivative market name: "VOL 15-JUN-23 25.00%"
+          const marketName = `VOL ${day}-${month}-${year} ${strikeValue.toFixed(
+            2
+          )}%`;
+
+          return {
+            id: market.id,
+            name: marketName,
+            symbol: `VOL-${strikeValue.toFixed(0)}`,
+            tvl: formatDeposits(market.totalDeposits),
+            tvlValue: market.totalDeposits,
+            protocol: "Surge",
+            category: "Variance Swap",
+            strategy: "Variance Swap",
+            icons: [market.isExpired ? "⚠️" : "🟢"],
+            timestamp: market.timestamp,
+            strike: market.strike,
+            isExpired: market.isExpired,
+            epoch: market.epoch,
+          };
+        });
+
+        setMarkets(formattedMarkets);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to load markets:", err);
+        setError("Failed to load market data. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMarkets();
+  }, []);
+
+  // Sample fallback data (only used if no markets are found)
+  const fallbackMarkets: Market[] = [
     {
       id: "1",
-      name: "BTC Volatility",
-      symbol: "BTC-VOL",
+      name: "VOL 15-JUN-23 25.00%",
+      symbol: "VOL-25",
       tvl: "$64.1M",
       tvlValue: 64100000,
       protocol: "Surge",
       category: "Variance Swap",
       strategy: "Variance Swap",
       icons: ["🟢"],
+      strike: 0.25,
+      timestamp: 1686096000, // June 2023
+      epoch: "1686096000",
     },
     {
       id: "2",
-      name: "ETH / BTC Volatility",
-      symbol: "ETH/BTC-VOL",
+      name: "VOL 30-SEP-23 32.00%",
+      symbol: "VOL-32",
       tvl: "$14.6M",
       tvlValue: 14600000,
       protocol: "Surge",
@@ -61,55 +145,30 @@ const Markets = () => {
       strategy: "Variance Swap",
       hasBoost: true,
       icons: ["🟢", "⚫"],
-    },
-    {
-      id: "3",
-      name: "SOL Perpetual",
-      symbol: "SOL-PERP",
-      tvl: "$13.4M",
-      tvlValue: 13400000,
-      protocol: "Surge",
-      category: "Perpetual",
-      strategy: "Perpetual",
-      hasBoost: true,
-      icons: ["🟢"],
-    },
-    {
-      id: "4",
-      name: "ETH Volatility Index",
-      symbol: "ETH-VOL-IDX",
-      tvl: "$18.2M",
-      tvlValue: 18200000,
-      protocol: "Surge",
-      category: "Volatility Index",
-      strategy: "Volatility Index",
-      icons: ["🟢", "⚫"],
+      strike: 0.32,
+      timestamp: 1693584000, // September 2023
+      epoch: "1693584000",
     },
   ];
 
-  // Table data for bottom section
-  const tableData = [
-    {
-      id: "1",
-      asset: "BTC Volatility",
-      icons: ["🟢", "⚫"],
-      tvl: "US$28,777,782",
-      tvlValue: 28777782,
-      protocol: "Surge",
-      strategy: "Variance Swap",
-      hasBoost: true,
-    },
-    {
-      id: "2",
-      asset: "SOL / ETH Volatility",
-      icons: ["🟢", "⚫"],
-      tvl: "US$4,441,173",
-      tvlValue: 4441173,
-      protocol: "Surge",
-      strategy: "Variance Swap",
-      hasBoost: true,
-    },
-  ];
+  // Use real markets if available, otherwise fallback to sample data
+  const displayMarkets = markets.length > 0 ? markets : fallbackMarkets;
+
+  // Table data for display
+  const tableData = displayMarkets.map((market) => ({
+    id: market.id,
+    asset: market.name,
+    icons: market.icons,
+    tvl: market.tvl,
+    tvlValue: market.tvlValue,
+    protocol: market.protocol,
+    strategy: market.strategy,
+    hasBoost: market.hasBoost || false,
+    timestamp: market.timestamp,
+    strike: market.strike,
+    isExpired: market.isExpired,
+    epoch: market.epoch,
+  }));
 
   // Custom badge component to match the design
   const StrategyBadge = ({ strategy }: { strategy: string }) => {
@@ -139,6 +198,35 @@ const Markets = () => {
         {strategy}
       </Badge>
     );
+  };
+
+  // Status badge
+  const StatusBadge = ({ isExpired }: { isExpired?: boolean }) => {
+    if (isExpired === undefined) return null;
+
+    return isExpired ? (
+      <Badge className="bg-gradient-to-r from-red-100 to-red-50 text-red-600 border-0 px-3 py-1 rounded-full font-medium shadow-sm">
+        <AlertTriangle className="w-3 h-3 mr-1" /> Expired
+      </Badge>
+    ) : (
+      <Badge className="bg-gradient-to-r from-green-100 to-green-50 text-green-600 border-0 px-3 py-1 rounded-full font-medium shadow-sm">
+        <Check className="w-3 h-3 mr-1" /> Active
+      </Badge>
+    );
+  };
+
+  // Format the expiry date from epoch
+  const formatExpiry = (epoch?: string) => {
+    if (!epoch) return "N/A";
+
+    try {
+      const epochNum = parseInt(epoch, 10);
+      const expiryDate = new Date(epochNum * 1000);
+      return expiryDate.toLocaleDateString();
+    } catch (err) {
+      console.error("Error formatting expiry:", err);
+      return "Invalid date";
+    }
   };
 
   return (
@@ -222,10 +310,11 @@ const Markets = () => {
               <div className="border-b border-[#019E8C]/10 px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between bg-gradient-to-r from-[#f5f5dc]/80 to-white gap-4">
                 <div>
                   <h3 className="text-2xl font-bold mb-1 bg-clip-text text-transparent bg-gradient-to-r from-[#344B47] to-[#019E8C]">
-                    Volatility Markets
+                    Volatility Variance Markets
                   </h3>
                   <p className="text-gray-600 font-light">
-                    Trade variance swaps and perpetual futures on{" "}
+                    Trade volatility derivatives with strike-based variance
+                    swaps on{" "}
                     <span className="text-[#019E8C] font-medium">Surge</span>
                   </p>
                 </div>
@@ -235,113 +324,106 @@ const Markets = () => {
                     size="sm"
                     className="rounded-full px-4 border-[#019E8C] text-[#019E8C] hover:bg-[#019E8C]/5 gap-2 shadow-sm"
                   >
-                    <Activity className="h-4 w-4" /> Sort by Volume
+                    <Calendar className="h-4 w-4" /> Sort by Expiry
                   </Button>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b-0 bg-gradient-to-r from-[#019E8C]/10 to-[#019E8C]/5">
-                      <TableHead className="py-4 text-xs uppercase tracking-wider font-semibold text-[#344B47]">
-                        Market
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
-                        Volume
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
-                        Protocol
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
-                        Type
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
-                        Docs
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
-                        Features
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[
-                      ...tableData,
-                      ...markets.map((market) => ({
-                        id: `market-${market.id}`,
-                        asset: market.name,
-                        icons: market.icons,
-                        tvl: market.tvl,
-                        tvlValue: market.tvlValue,
-                        protocol: market.protocol,
-                        strategy: market.strategy,
-                        hasBoost: market.hasBoost || false,
-                      })),
-                    ].map((row, index) => (
-                      <TableRow
-                        key={row.id}
-                        className={`h-16 transition-all cursor-pointer border-b border-gray-100 last:border-0 ${
-                          index % 2 === 0 ? "bg-white" : "bg-[#f5f5dc]/30"
-                        } hover:bg-gradient-to-r hover:from-[#019E8C]/5 hover:to-[#019E8C]/10`}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex p-2 rounded-full bg-gray-100">
-                              {row.icons.map((icon, idx) => (
-                                <span key={idx} className="text-2xl">
-                                  {icon}
-                                </span>
-                              ))}
-                            </div>
-                            <span className="font-semibold text-[#344B47]">
-                              {row.asset}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-bold text-[#344B47]">
-                          {row.tvl}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="inline-block w-4 h-4 bg-[#019E8C] rounded-full shadow-sm"></span>
-                            <span className="font-medium text-[#344B47]">
-                              {row.protocol}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <StrategyBadge strategy={row.strategy} />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-full border-gray-200 hover:bg-[#019E8C]/10 hover:border-[#019E8C]/30"
-                            >
-                              <FileText className="h-4 w-4 text-gray-600 group-hover:text-[#019E8C]" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-full border-gray-200 hover:bg-[#019E8C]/10 hover:border-[#019E8C]/30"
-                            >
-                              <ExternalLink className="h-4 w-4 text-gray-600 group-hover:text-[#019E8C]" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {row.hasBoost && (
-                            <Badge className="bg-gradient-to-r from-[#019E8C]/20 to-[#019E8C]/5 text-[#019E8C] border-0 px-3 py-1 rounded-full font-medium shadow-sm">
-                              <Coins className="w-3 h-3 mr-1" /> SURGE Boost
-                            </Badge>
-                          )}
-                        </TableCell>
+              {isLoading ? (
+                <div className="p-10 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#019E8C] mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading markets...</p>
+                </div>
+              ) : error ? (
+                <div className="p-10 text-center">
+                  <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                  <p className="text-red-600 mb-2">{error}</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                    className="rounded-full px-4 border-[#019E8C] text-[#019E8C] hover:bg-[#019E8C]/5 gap-2 shadow-sm"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b-0 bg-gradient-to-r from-[#019E8C]/10 to-[#019E8C]/5">
+                        <TableHead className="py-4 text-xs uppercase tracking-wider font-semibold text-[#344B47]">
+                          Market
+                        </TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
+                          Protocol
+                        </TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
+                          Type
+                        </TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
+                          Strike
+                        </TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
+                          Expiry
+                        </TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider font-semibold text-[#344B47]">
+                          Status
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {tableData.map((row, index) => (
+                        <TableRow
+                          key={row.id}
+                          className={`h-16 transition-all cursor-pointer border-b border-gray-100 last:border-0 ${
+                            index % 2 === 0 ? "bg-white" : "bg-[#f5f5dc]/30"
+                          } hover:bg-gradient-to-r hover:from-[#019E8C]/5 hover:to-[#019E8C]/10`}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="flex p-2 rounded-full bg-gray-100">
+                                {row.icons.map((icon, idx) => (
+                                  <span key={idx} className="text-2xl">
+                                    {icon}
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="font-semibold text-[#344B47]">
+                                {row.asset}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-4 h-4 bg-[#019E8C] rounded-full shadow-sm"></span>
+                              <span className="font-medium text-[#344B47]">
+                                {row.protocol}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <StrategyBadge strategy={row.strategy} />
+                          </TableCell>
+                          <TableCell className="font-medium text-[#344B47]">
+                            {row.strike !== undefined
+                              ? `${(row.strike * 100).toFixed(2)}%`
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell className="text-[#344B47]">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              <span>{formatExpiry(row.epoch)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge isExpired={row.isExpired} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </div>
           </section>
         </div>
