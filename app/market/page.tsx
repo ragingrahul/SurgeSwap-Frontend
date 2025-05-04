@@ -21,6 +21,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { fetchAllMarkets, formatDeposits } from "@/lib/marketUtils";
+import MarketDetailsPopup from "@/components/MarketDetailsPopup";
 
 // Market type definition for display
 interface Market {
@@ -39,12 +40,14 @@ interface Market {
   strike?: number;
   isExpired?: boolean;
   epoch?: string;
+  address?: string;
 }
 
 const Markets = () => {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
 
   useEffect(() => {
     const loadMarkets = async () => {
@@ -102,6 +105,7 @@ const Markets = () => {
             strike: market.strike,
             isExpired: market.isExpired,
             epoch: market.epoch,
+            address: market.address,
           };
         });
 
@@ -133,6 +137,7 @@ const Markets = () => {
       strike: 0.25,
       timestamp: 1686096000, // June 2023
       epoch: "1686096000",
+      address: "Surge1111111111111111111111111111111111",
     },
     {
       id: "2",
@@ -148,6 +153,7 @@ const Markets = () => {
       strike: 0.32,
       timestamp: 1693584000, // September 2023
       epoch: "1693584000",
+      address: "Surge2222222222222222222222222222222222",
     },
   ];
 
@@ -168,6 +174,7 @@ const Markets = () => {
     strike: market.strike,
     isExpired: market.isExpired,
     epoch: market.epoch,
+    address: market.address,
   }));
 
   // Custom badge component to match the design
@@ -227,6 +234,34 @@ const Markets = () => {
       console.error("Error formatting expiry:", err);
       return "Invalid date";
     }
+  };
+
+  // Handle row click to open market details
+  const handleRowClick = (market: {
+    id: string;
+    asset: string;
+    icons: string[];
+    tvl: string;
+    tvlValue: number;
+    protocol: string;
+    strategy: string;
+    hasBoost: boolean;
+    timestamp?: number;
+    strike?: number;
+    isExpired?: boolean;
+    epoch?: string;
+    address?: string;
+  }) => {
+    // Find the full market data from the displayMarkets array
+    const fullMarket = displayMarkets.find((m) => m.id === market.id);
+    if (fullMarket) {
+      setSelectedMarket(fullMarket);
+    }
+  };
+
+  // Close the market details popup
+  const closeMarketDetails = () => {
+    setSelectedMarket(null);
   };
 
   return (
@@ -378,6 +413,7 @@ const Markets = () => {
                           className={`h-16 transition-all cursor-pointer border-b border-gray-100 last:border-0 ${
                             index % 2 === 0 ? "bg-white" : "bg-[#f5f5dc]/30"
                           } hover:bg-gradient-to-r hover:from-[#019E8C]/5 hover:to-[#019E8C]/10`}
+                          onClick={() => handleRowClick(row)}
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -428,6 +464,23 @@ const Markets = () => {
           </section>
         </div>
       </main>
+
+      {/* Market Details Popup */}
+      {selectedMarket && (
+        <MarketDetailsPopup
+          id={selectedMarket.id}
+          name={selectedMarket.name}
+          address={selectedMarket.address || ""}
+          symbol={selectedMarket.symbol}
+          protocol={selectedMarket.protocol}
+          strategy={selectedMarket.strategy}
+          strike={selectedMarket.strike}
+          epoch={selectedMarket.epoch}
+          isExpired={selectedMarket.isExpired}
+          isOpen={!!selectedMarket}
+          onClose={closeMarketDetails}
+        />
+      )}
     </div>
   );
 };
