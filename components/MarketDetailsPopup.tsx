@@ -90,6 +90,7 @@ const MarketDetailsPopup = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [userPositions, setUserPositions] = useState<any[]>([]);
   const [isLoadingPositions, setIsLoadingPositions] = useState<boolean>(false);
+  const [dynamicExpired, setDynamicExpired] = useState<boolean>(isExpired);
 
   // Get the connected wallet
   const wallet = useWallet();
@@ -320,6 +321,34 @@ const MarketDetailsPopup = ({
     }
   };
 
+  // Add effect to check epoch vs current time
+  useEffect(() => {
+    if (epoch) {
+      try {
+        const epochTimestamp = parseInt(epoch, 10) * 1000; // Convert to milliseconds
+        const currentTimestamp = Date.now();
+        const isExpiredNow = currentTimestamp > epochTimestamp;
+
+        console.log("Epoch check:", {
+          epoch,
+          epochTimestamp,
+          currentTimestamp,
+          isExpiredNow,
+          epochDate: new Date(epochTimestamp).toLocaleString(),
+          currentDate: new Date(currentTimestamp).toLocaleString(),
+        });
+
+        setDynamicExpired(isExpiredNow);
+      } catch (err) {
+        console.error("Error parsing epoch:", err);
+        // Fall back to the provided isExpired prop
+        setDynamicExpired(isExpired);
+      }
+    } else {
+      setDynamicExpired(isExpired);
+    }
+  }, [epoch, isExpired]);
+
   // Properly handle mint action using Anchor and the IDL
   const handleMint = async () => {
     if (!connected || !publicKey) {
@@ -337,7 +366,7 @@ const MarketDetailsPopup = ({
       return;
     }
 
-    if (isExpired) {
+    if (dynamicExpired) {
       toast.error("This market has expired");
       return;
     }
@@ -537,7 +566,7 @@ const MarketDetailsPopup = ({
             <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">
               Market Details
             </DialogTitle>
-            <StatusBadge isExpired={isExpired} />
+            <StatusBadge isExpired={dynamicExpired} />
           </div>
         </DialogHeader>
 
@@ -726,7 +755,9 @@ const MarketDetailsPopup = ({
                       : "bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994]"
                   }`}
                   onClick={handleMint}
-                  disabled={!amount || isExpired || !connected || isMinting}
+                  disabled={
+                    !amount || dynamicExpired || !connected || isMinting
+                  }
                 >
                   <span
                     className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform translate-x-0 

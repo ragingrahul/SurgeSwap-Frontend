@@ -188,23 +188,43 @@ const Markets = () => {
   // Use real markets if available, otherwise fallback to sample data
   const displayMarkets = markets.length > 0 ? markets : fallbackMarkets;
 
-  // Table data for display
-  const tableData = displayMarkets.map((market) => ({
-    id: market.id,
-    asset: market.name,
-    icons: market.icons,
-    tvl: market.tvl,
-    tvlValue: market.tvlValue,
-    protocol: market.protocol,
-    strategy: market.strategy,
-    hasBoost: market.hasBoost || false,
-    timestamp: market.timestamp,
-    strike: market.strike,
-    isExpired: market.isExpired,
-    epoch: market.epoch,
-    address: market.address,
-    currentVol: market.currentVol,
-  }));
+  // Update tableData to include dynamically checked expiry status
+  const tableData = displayMarkets.map((market) => {
+    // Add dynamic expiry check based on epoch
+    let dynamicExpired = market.isExpired || false;
+
+    if (market.epoch) {
+      try {
+        const epochTimestamp = parseInt(market.epoch, 10) * 1000; // Convert to milliseconds
+        const currentTimestamp = Date.now();
+        dynamicExpired = currentTimestamp > epochTimestamp;
+      } catch (err) {
+        console.error(`Error checking expiry for market ${market.id}:`, err);
+        // Fall back to the provided isExpired value
+      }
+    }
+
+    return {
+      id: market.id,
+      asset: market.name,
+      icons: market.icons,
+      tvl: market.tvl,
+      tvlValue: market.tvlValue,
+      protocol: market.protocol,
+      strategy: market.strategy,
+      hasBoost: market.hasBoost || false,
+      timestamp: market.timestamp,
+      strike: market.strike,
+      isExpired: dynamicExpired, // Use the dynamically calculated expiry status
+      epoch: market.epoch,
+      address: market.address,
+      currentVol: market.currentVol,
+      // Ensure we pass on the token addresses
+      varLongMint: market.varLongMint,
+      varShortMint: market.varShortMint,
+      usdcVault: market.usdcVault,
+    };
+  });
 
   // Custom badge component to match the design
   const StrategyBadge = ({ strategy }: { strategy: string }) => {
