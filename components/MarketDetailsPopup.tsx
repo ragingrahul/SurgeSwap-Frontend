@@ -87,6 +87,9 @@ const MarketDetailsPopup = ({
   const [usdcBalance, setUsdcBalance] = useState<string>("0");
   const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(false);
   const [isMinting, setIsMinting] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [userPositions, setUserPositions] = useState<any[]>([]);
+  const [isLoadingPositions, setIsLoadingPositions] = useState<boolean>(false);
 
   // Get the connected wallet
   const wallet = useWallet();
@@ -173,27 +176,111 @@ const MarketDetailsPopup = ({
     return () => clearInterval(intervalId);
   }, [publicKey, connected]);
 
+  // Add function to fetch user token positions
+  const fetchUserPositions = async () => {
+    if (!publicKey || !connected || !varLongMint || !varShortMint) {
+      setUserPositions([]);
+      return;
+    }
+
+    try {
+      setIsLoadingPositions(true);
+      const connection = new Connection(RPC_ENDPOINTS[0], "confirmed");
+
+      // Create PublicKeys for token mints
+      const varLongMintPubkey = new PublicKey(varLongMint);
+      const varShortMintPubkey = new PublicKey(varShortMint);
+
+      // Get token accounts addresses
+      const longTokenAta = await getAssociatedTokenAddress(
+        varLongMintPubkey,
+        publicKey
+      );
+      const shortTokenAta = await getAssociatedTokenAddress(
+        varShortMintPubkey,
+        publicKey
+      );
+
+      // Initialize positions array
+      const positions = [];
+
+      // Check for LONG position
+      try {
+        const longAccountInfo = await connection.getAccountInfo(longTokenAta);
+        if (longAccountInfo) {
+          // Account exists, get balance
+          const longTokenBalance = await connection.getTokenAccountBalance(
+            longTokenAta
+          );
+          if (
+            longTokenBalance.value.uiAmount &&
+            longTokenBalance.value.uiAmount > 0
+          ) {
+            positions.push({
+              type: "LONG",
+              amount: longTokenBalance.value.uiAmountString || "0",
+              value: `$${parseFloat(
+                longTokenBalance.value.uiAmountString || "0"
+              ).toFixed(2)}`,
+              profit: "N/A", // Would require additional data to calculate
+              isProfit: true,
+              mintDate: new Date().toLocaleDateString(), // Real mint date would require transaction history
+              token: "USDC",
+              address: longTokenAta.toString(),
+            });
+          }
+        }
+      } catch (error) {
+        console.warn("Error fetching long token balance:", error);
+      }
+
+      // Check for SHORT position
+      try {
+        const shortAccountInfo = await connection.getAccountInfo(shortTokenAta);
+        if (shortAccountInfo) {
+          // Account exists, get balance
+          const shortTokenBalance = await connection.getTokenAccountBalance(
+            shortTokenAta
+          );
+          if (
+            shortTokenBalance.value.uiAmount &&
+            shortTokenBalance.value.uiAmount > 0
+          ) {
+            positions.push({
+              type: "SHORT",
+              amount: shortTokenBalance.value.uiAmountString || "0",
+              value: `$${parseFloat(
+                shortTokenBalance.value.uiAmountString || "0"
+              ).toFixed(2)}`,
+              profit: "N/A", // Would require additional data to calculate
+              isProfit: false,
+              mintDate: new Date().toLocaleDateString(), // Real mint date would require transaction history
+              token: "USDC",
+              address: shortTokenAta.toString(),
+            });
+          }
+        }
+      } catch (error) {
+        console.warn("Error fetching short token balance:", error);
+      }
+
+      setUserPositions(positions);
+      console.log("User positions:", positions);
+    } catch (error) {
+      console.error("Error fetching user positions:", error);
+    } finally {
+      setIsLoadingPositions(false);
+    }
+  };
+
+  // Call fetchUserPositions when wallet connects or tab changes to positions
+  useEffect(() => {
+    if (activeTab === "positions" && connected) {
+      fetchUserPositions();
+    }
+  }, [activeTab, connected, publicKey, varLongMint, varShortMint]);
+
   // Mock data for user positions
-  const mockPositions = [
-    {
-      type: "LONG",
-      amount: "2.5",
-      value: "$125.00",
-      profit: "+12.3%",
-      isProfit: true,
-      mintDate: "2023-09-15",
-      token: "USDC",
-    },
-    {
-      type: "SHORT",
-      amount: "1.8",
-      value: "$89.50",
-      profit: "-4.2%",
-      isProfit: false,
-      mintDate: "2023-10-22",
-      token: "USDC",
-    },
-  ];
 
   // Badge classes for position types
   const longBadgeClass =
@@ -409,8 +496,9 @@ const MarketDetailsPopup = ({
         } tokens`
       );
 
-      // Refresh balances
+      // Refresh balances and positions
       fetchUsdcBalance();
+      fetchUserPositions();
     } catch (error: unknown) {
       console.error("Error minting tokens:", error);
       toast.error("Failed to mint tokens", {
@@ -672,9 +760,16 @@ const MarketDetailsPopup = ({
                 Your Positions
               </h3>
 
-              {mockPositions.length > 0 ? (
+              {isLoadingPositions ? (
+                <div className="bg-[#192337]/80 rounded-xl p-6 text-center border border-[#2d3a59]/50">
+                  <div className="flex items-center justify-center space-x-2 mb-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-[#B079B5]" />
+                    <span>Loading your positions...</span>
+                  </div>
+                </div>
+              ) : userPositions.length > 0 ? (
                 <div className="space-y-4">
-                  {mockPositions.map((position, index) => (
+                  {userPositions.map((position, index) => (
                     <div
                       key={index}
                       className="bg-gradient-to-br from-[#192337] to-[#1a253b] rounded-xl p-4 border border-[#2d3a59]/50 shadow-md"
@@ -698,7 +793,7 @@ const MarketDetailsPopup = ({
                           className={`text-sm font-medium ${
                             position.isProfit
                               ? "text-green-400"
-                              : "text-red-400"
+                              : "text-gray-400"
                           }`}
                         >
                           {position.profit}
@@ -733,8 +828,14 @@ const MarketDetailsPopup = ({
                         <Button
                           className="w-full bg-gradient-to-r from-[#192337] to-[#1a253b] text-white hover:from-[#1a253b] hover:to-[#1f2e45] border border-[#2d3a59]"
                           variant="outline"
+                          onClick={() =>
+                            window.open(
+                              `https://explorer.solana.com/address/${position.address}?cluster=devnet`,
+                              "_blank"
+                            )
+                          }
                         >
-                          Redeem Position
+                          View on Explorer
                         </Button>
                       </div>
                     </div>
@@ -749,7 +850,7 @@ const MarketDetailsPopup = ({
                     No positions found
                   </h4>
                   <p className="text-gray-400 text-sm mb-4">
-                    You dont have any minted tokens for this market yet.
+                    You don&apos;t have any minted tokens for this market yet.
                   </p>
                   <Button
                     className="bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
