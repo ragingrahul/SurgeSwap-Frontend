@@ -21,6 +21,7 @@ export interface MarketData {
   isInitialized: boolean;
   isExpired: boolean;
   totalDeposits: number;
+  currentVol?: number; // Current realized volatility
 }
 
 // Create a simple wallet adapter
@@ -77,6 +78,7 @@ export async function fetchAllMarkets(): Promise<MarketData[]> {
         isInitialized: data.isInitialized,
         isExpired: data.isExpired,
         totalDeposits: data.totalDeposits.toNumber(),
+        currentVol: Math.sqrt(data.realizedVariance), // Calculate volatility as sqrt of variance
       };
     });
   } catch (error) {

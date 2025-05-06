@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { fetchAllMarkets, formatDeposits } from "@/lib/marketUtils";
 import MarketDetailsPopup from "@/components/MarketDetailsPopup";
+import { useVolatilityEffect } from "@/hooks/useVolatilityEffect";
 
 // Market type definition for display
 interface Market {
@@ -41,6 +42,10 @@ interface Market {
   isExpired?: boolean;
   epoch?: string;
   address?: string;
+  currentVol?: number; // Current realized volatility
+  varLongMint?: string;
+  varShortMint?: string;
+  usdcVault?: string;
 }
 
 const Markets = () => {
@@ -48,6 +53,23 @@ const Markets = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+
+  // Get live volatility data from the hook
+  const { volatility, loading: volatilityLoading } = useVolatilityEffect();
+
+  // Calculate change percentage (mock data for now)
+  const [changePercentage, setChangePercentage] = useState(2.4);
+  const [isPositiveChange, setIsPositiveChange] = useState(true);
+
+  useEffect(() => {
+    // Calculate mock change percentage based on volatility
+    // In a real app, you'd track previous values and calculate actual change
+    if (!volatilityLoading && volatility) {
+      const randomChange = (Math.random() * 5 - 2).toFixed(1);
+      setChangePercentage(parseFloat(randomChange));
+      setIsPositiveChange(parseFloat(randomChange) >= 0);
+    }
+  }, [volatility, volatilityLoading]);
 
   useEffect(() => {
     const loadMarkets = async () => {
@@ -106,6 +128,10 @@ const Markets = () => {
             isExpired: market.isExpired,
             epoch: market.epoch,
             address: market.address,
+            currentVol: market.currentVol,
+            varLongMint: market.varLongMint,
+            varShortMint: market.varShortMint,
+            usdcVault: market.usdcVault,
           };
         });
 
@@ -138,6 +164,7 @@ const Markets = () => {
       timestamp: 1686096000, // June 2023
       epoch: "1686096000",
       address: "Surge1111111111111111111111111111111111",
+      currentVol: 0.2,
     },
     {
       id: "2",
@@ -154,6 +181,7 @@ const Markets = () => {
       timestamp: 1693584000, // September 2023
       epoch: "1693584000",
       address: "Surge2222222222222222222222222222222222",
+      currentVol: 0.3,
     },
   ];
 
@@ -175,6 +203,7 @@ const Markets = () => {
     isExpired: market.isExpired,
     epoch: market.epoch,
     address: market.address,
+    currentVol: market.currentVol,
   }));
 
   // Custom badge component to match the design
@@ -251,6 +280,7 @@ const Markets = () => {
     isExpired?: boolean;
     epoch?: string;
     address?: string;
+    currentVol?: number;
   }) => {
     // Find the full market data from the displayMarkets array
     const fullMarket = displayMarkets.find((m) => m.id === market.id);
@@ -331,6 +361,41 @@ const Markets = () => {
                       </div>
                     </div>
 
+                    {/* Volatility Display */}
+                    <div className="absolute right-64 bottom-16 w-[180px] h-[180px] rounded-full bg-white border-2 border-[#019E8C]/10 shadow-md flex flex-col items-center justify-center z-20">
+                      {/* Content */}
+                      <span className="text-gray-500 text-sm font-medium mb-0.5">
+                        SOL Volatility
+                      </span>
+                      {volatilityLoading ? (
+                        <div className="text-[#019E8C] text-6xl font-bold leading-none tracking-tight mb-1 opacity-50">
+                          ...
+                        </div>
+                      ) : (
+                        <div className="text-[#019E8C] text-6xl font-bold leading-none tracking-tight mb-1">
+                          {volatility ? volatility.toFixed(2) : "36.24"}
+                          <span className="text-4xl">%</span>
+                        </div>
+                      )}
+                      <div className="flex items-center">
+                        {isPositiveChange ? (
+                          <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                        ) : (
+                          <TrendingUp className="h-4 w-4 text-red-500 mr-1 transform rotate-180" />
+                        )}
+                        <span
+                          className={
+                            isPositiveChange
+                              ? "text-green-500 text-sm font-medium"
+                              : "text-red-500 text-sm font-medium"
+                          }
+                        >
+                          {isPositiveChange ? "+" : ""}
+                          {changePercentage}%
+                        </span>
+                      </div>
+                    </div>
+
                     {/* Background effect */}
                     <div className="absolute inset-0 flex items-center justify-center text-[#111]/5 text-9xl font-bold z-[-1] animate-pulse-subtle">
                       SURGE
@@ -353,14 +418,16 @@ const Markets = () => {
                     <span className="text-[#019E8C] font-medium">Surge</span>
                   </p>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full px-4 border-[#019E8C] text-[#019E8C] hover:bg-[#019E8C]/5 gap-2 shadow-sm"
-                  >
-                    <Calendar className="h-4 w-4" /> Sort by Expiry
-                  </Button>
+                <div className="flex flex-col items-end">
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full px-4 border-[#019E8C] text-[#019E8C] hover:bg-[#019E8C]/5 gap-2 shadow-sm"
+                    >
+                      <Calendar className="h-4 w-4" /> Sort by Expiry
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -476,9 +543,13 @@ const Markets = () => {
           strategy={selectedMarket.strategy}
           strike={selectedMarket.strike}
           epoch={selectedMarket.epoch}
+          timestamp={selectedMarket.timestamp}
           isExpired={selectedMarket.isExpired}
           isOpen={!!selectedMarket}
           onClose={closeMarketDetails}
+          varLongMint={selectedMarket.varLongMint}
+          varShortMint={selectedMarket.varShortMint}
+          usdcVault={selectedMarket.usdcVault}
         />
       )}
     </div>

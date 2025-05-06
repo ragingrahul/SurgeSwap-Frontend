@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,6 @@ import {
   Activity,
   Calendar,
   Check,
-  ChevronDown,
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
@@ -22,7 +21,25 @@ import {
   ArrowRight,
   CircleDollarSign,
   LayoutGrid,
+  Loader2,
 } from "lucide-react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
+import {
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+} from "@solana/spl-token";
+import { toast } from "sonner";
+import type { SurgeVariance } from "@/idl/surge_variance";
+import idl from "@/idl/surge_variance.json";
+
+// USDC token data (Devnet)
+const USDC_TOKEN_ADDRESS = "F2Yuf5LrH2ySTsk1M9CHkyeb9sFnXiRjWWH1Fwy1jTrv";
+const USDC_MINT = new PublicKey(USDC_TOKEN_ADDRESS);
+
+// Program ID for Surge Variance (from IDL)
 
 export interface MarketDetailsProps {
   id: string;
@@ -33,24 +50,128 @@ export interface MarketDetailsProps {
   strategy: string;
   strike?: number;
   epoch?: string;
+  timestamp?: number;
   isExpired?: boolean;
   isOpen: boolean;
   onClose: () => void;
+  varLongMint?: string;
+  varShortMint?: string;
+  usdcVault?: string;
 }
 
-const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
+// USDC token data
+
+// Alternative RPC endpoints to try if the main one fails
+const RPC_ENDPOINTS = [
+  "https://api.devnet.solana.com", // Using devnet for testing
+];
+
+const MarketDetailsPopup = ({
   name,
   address,
   strategy,
   strike = 0,
   epoch,
+  timestamp,
   isExpired = false,
   isOpen,
   onClose,
-}) => {
+  varLongMint,
+  varShortMint,
+  usdcVault,
+}: MarketDetailsProps): React.ReactElement => {
   const [amount, setAmount] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("mint");
   const [mintType, setMintType] = useState<string>("long");
+  const [estimatedValue, setEstimatedValue] = useState<string>("");
+  const [usdcBalance, setUsdcBalance] = useState<string>("0");
+  const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(false);
+  const [isMinting, setIsMinting] = useState<boolean>(false);
+
+  // Get the connected wallet
+  const wallet = useWallet();
+  const { publicKey, connected, signTransaction, signAllTransactions } = wallet;
+
+  // Function to fetch USDC balance using getTokenAccountBalance
+  const fetchUsdcBalance = async () => {
+    if (!publicKey || !connected) {
+      setUsdcBalance("0");
+      return;
+    }
+
+    try {
+      setIsLoadingBalance(true);
+
+      // Try multiple RPC endpoints in case some fail
+      let balance = 0;
+      let success = false;
+      let lastError;
+
+      for (const endpoint of RPC_ENDPOINTS) {
+        try {
+          const connection = new Connection(endpoint, "confirmed");
+
+          // 1. First find all token accounts owned by this wallet for the USDC token
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            publicKey,
+            { mint: USDC_MINT },
+            "confirmed"
+          );
+
+          // Check if any token accounts were found
+          if (tokenAccounts.value.length > 0) {
+            // 2. Get the first token account (usually there's only one per token)
+            const tokenAccountAddress = tokenAccounts.value[0].pubkey;
+
+            // 3. Use getTokenAccountBalance to get the balance
+            const tokenBalance = await connection.getTokenAccountBalance(
+              tokenAccountAddress
+            );
+
+            // 4. Extract the UI-friendly balance amount
+            balance = Number(tokenBalance.value.uiAmountString);
+
+            console.log("USDC Token Balance:", tokenBalance);
+            console.log("UI Amount:", tokenBalance.value.uiAmount);
+            console.log("UI Amount String:", tokenBalance.value.uiAmountString);
+          }
+
+          success = true;
+          break; // Exit the loop if successful
+        } catch (error) {
+          console.warn(`RPC endpoint ${endpoint} failed:`, error);
+          lastError = error;
+          // Continue to try the next endpoint
+        }
+      }
+
+      if (!success) {
+        console.error("All RPC endpoints failed:", lastError);
+        setUsdcBalance("Error");
+      } else {
+        setUsdcBalance(
+          balance.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching USDC balance:", error);
+      setUsdcBalance("Error");
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  // Fetch USDC balance when wallet connects or component mounts
+  useEffect(() => {
+    fetchUsdcBalance();
+    // Refresh balance every 30 seconds
+    const intervalId = setInterval(fetchUsdcBalance, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [publicKey, connected]);
 
   // Mock data for user positions
   const mockPositions = [
@@ -61,6 +182,7 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
       profit: "+12.3%",
       isProfit: true,
       mintDate: "2023-09-15",
+      token: "USDC",
     },
     {
       type: "SHORT",
@@ -69,6 +191,7 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
       profit: "-4.2%",
       isProfit: false,
       mintDate: "2023-10-22",
+      token: "USDC",
     },
   ];
 
@@ -77,6 +200,22 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
     "bg-gradient-to-r from-[#019E8C]/20 to-[#019E8C]/10 text-[#019E8C] border-0 px-3 py-1 rounded-full font-medium shadow-sm";
   const shortBadgeClass =
     "bg-gradient-to-r from-[#B079B5]/20 to-[#B079B5]/10 text-[#B079B5] border-0 px-3 py-1 rounded-full font-medium shadow-sm";
+
+  // Update the value estimation function to only show USD value (since we only use USDC)
+  useEffect(() => {
+    // Only calculate if an amount is entered
+    if (!amount || isNaN(parseFloat(amount))) {
+      setEstimatedValue("");
+      return;
+    }
+
+    const amountNum = parseFloat(amount);
+
+    // USDC is a stablecoin, so 1 USDC ≈ $1 USD
+    const dollarValue = amountNum;
+
+    setEstimatedValue(`≈ $${dollarValue.toFixed(2)} USD`);
+  }, [amount]);
 
   // Format epoch as date
   const formatExpiry = (epoch?: string) => {
@@ -94,14 +233,194 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
     }
   };
 
-  // Handle mint action
-  const handleMint = () => {
-    console.log(
-      `Minting ${amount} ${
-        mintType === "long" ? "VAR LONG" : "VAR SHORT"
-      } tokens`
-    );
-    // Here you would integrate with Solana wallet and make the actual transaction
+  // Properly handle mint action using Anchor and the IDL
+  const handleMint = async () => {
+    if (!connected || !publicKey) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    if (!signTransaction) {
+      toast.error("Wallet does not support transaction signing");
+      return;
+    }
+
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    if (isExpired) {
+      toast.error("This market has expired");
+      return;
+    }
+
+    try {
+      setIsMinting(true);
+
+      // Set up loading notification
+      toast.loading(
+        `Minting ${amount} ${
+          mintType === "long" ? "VAR LONG" : "VAR SHORT"
+        } tokens...`
+      );
+      const connection = new Connection(
+        "https://api.devnet.solana.com",
+        "confirmed"
+      );
+
+      // Initialize the Anchor Program
+      const walletAdapter = {
+        publicKey,
+        signTransaction: signTransaction!,
+        signAllTransactions: signAllTransactions!,
+      };
+
+      const provider = new AnchorProvider(connection, walletAdapter, {
+        commitment: "confirmed",
+      });
+      anchor.setProvider(provider);
+
+      // Initialize the program with IDL address from the file
+      const program = new Program<SurgeVariance>(
+        idl as SurgeVariance,
+        provider
+      );
+
+      // First check if we have the required token addresses
+      if (!varLongMint || !varShortMint || !usdcVault) {
+        toast.error("Missing token address information", {
+          description: "Please try again with a different market",
+        });
+        return;
+      }
+
+      const epochBN = new BN(epoch || "0");
+      const timestampBN = new BN(timestamp || 0);
+
+      // Compute market PDA
+      const [marketPDA, marketBump] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("market"),
+          Buffer.from(epochBN.toArrayLike(Buffer, "le", 8)),
+          Buffer.from(timestampBN.toArrayLike(Buffer, "le", 8)),
+        ],
+        program.programId
+      );
+
+      // Determine which token mint to use based on position type
+      const isLong = mintType === "long";
+
+      // Get user's USDC account
+      const userUsdc = await getAssociatedTokenAddress(USDC_MINT, publicKey);
+
+      // Get user's associated VAR token account
+      const varMinLongtKey = new PublicKey(varLongMint);
+      const varMinShortKey = new PublicKey(varShortMint);
+      const userVarLong = await getAssociatedTokenAddress(
+        varMinLongtKey,
+        publicKey
+      );
+      const userVarShort = await getAssociatedTokenAddress(
+        varMinShortKey,
+        publicKey
+      );
+
+      // Create a transaction to check and create token accounts if needed
+      const transaction = new Transaction();
+
+      // Check if the token accounts exist, create them if not
+      try {
+        // Check if long token account exists
+        const longAccountInfo = await connection.getAccountInfo(userVarLong);
+        if (!longAccountInfo) {
+          console.log("Creating VAR Long token account...");
+          transaction.add(
+            createAssociatedTokenAccountInstruction(
+              publicKey, // payer
+              userVarLong, // associatedToken
+              publicKey, // owner
+              varMinLongtKey // mint
+            )
+          );
+        }
+
+        // Check if short token account exists
+        const shortAccountInfo = await connection.getAccountInfo(userVarShort);
+        if (!shortAccountInfo) {
+          console.log("Creating VAR Short token account...");
+          transaction.add(
+            createAssociatedTokenAccountInstruction(
+              publicKey, // payer
+              userVarShort, // associatedToken
+              publicKey, // owner
+              varMinShortKey // mint
+            )
+          );
+        }
+
+        // If we need to create any accounts, send and confirm this transaction first
+        if (transaction.instructions.length > 0) {
+          transaction.feePayer = publicKey;
+          const { blockhash } = await connection.getLatestBlockhash();
+          transaction.recentBlockhash = blockhash;
+
+          const signedTx = await signTransaction(transaction);
+          const txid = await connection.sendRawTransaction(
+            signedTx.serialize()
+          );
+          await connection.confirmTransaction(txid, "confirmed");
+          console.log("Created token accounts: ", txid);
+        }
+      } catch (err) {
+        console.error("Error creating token accounts:", err);
+        toast.error("Failed to create token accounts");
+        return;
+      }
+
+      // Now proceed with minting as the accounts exist
+      const bumps = {
+        market: marketBump,
+      };
+
+      // Convert amount to lamports (USDC has 6 decimals)
+      const amountLamports = new BN(Math.floor(parseFloat(amount) * 1_000_000));
+
+      await program.methods
+        .mintTokens(amountLamports, isLong, epochBN, timestampBN, bumps)
+        .accounts({
+          market: marketPDA,
+          userAuthority: publicKey,
+          userUsdc,
+          usdcVault: new PublicKey(usdcVault),
+          varLongMint: new PublicKey(varLongMint),
+          varShortMint: new PublicKey(varShortMint),
+          userVarLong: userVarLong,
+          userVarShort: userVarShort,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
+        .rpc();
+
+      // Success notification
+      toast.success(
+        `Successfully minted ${amount} ${
+          mintType === "long" ? "VAR LONG" : "VAR SHORT"
+        } tokens`
+      );
+
+      // Refresh balances
+      fetchUsdcBalance();
+    } catch (error: unknown) {
+      console.error("Error minting tokens:", error);
+      toast.error("Failed to mint tokens", {
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      setIsMinting(false);
+      toast.dismiss();
+    }
   };
 
   // Status badge
@@ -264,11 +583,18 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <div className="text-sm text-gray-400">Amount</div>
-                  <div className="text-sm text-gray-400">
-                    Available: <span className="text-white">0.08866 SOL</span>
+                  <div className="text-sm text-gray-400 flex items-center">
+                    Available:{" "}
+                    {isLoadingBalance ? (
+                      <Loader2 className="ml-1 h-3 w-3 animate-spin text-white" />
+                    ) : (
+                      <span className="text-white ml-1">
+                        {connected ? `${usdcBalance} USDC` : "Connect wallet"}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 mb-4">
                   <div className="relative flex-1">
                     <Input
                       type="text"
@@ -277,20 +603,22 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
                       onChange={(e) => setAmount(e.target.value)}
                       className="w-full bg-[#192337] border-[#2d3a59] focus:border-[#019E8C] focus:ring-[#019E8C]/20 text-white px-4 py-3 h-12 rounded-lg shadow-inner"
                     />
+                    {estimatedValue && (
+                      <div className="absolute -bottom-6 left-0 text-xs text-gray-400">
+                        {estimatedValue}
+                      </div>
+                    )}
                   </div>
                   <div className="bg-[#192337] border border-[#2d3a59] rounded-lg h-12 px-3 flex items-center shadow-md">
                     <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#9945FF] to-[#14F195]"></div>
-                      <span className="text-white">SOL</span>
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                      <div className="w-5 h-5 rounded-full bg-[#2775CA]"></div>
+                      <span className="text-white">USDC</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-between mt-2 text-sm text-gray-400">
-                  <div>Transaction Settings</div>
-                  <div>
-                    Slippage: <span className="text-white">0.50%</span>
-                  </div>
+                <div className="mt-2 text-xs text-[#019E8C]">
+                  Using USDC token ({USDC_TOKEN_ADDRESS.slice(0, 4)}...
+                  {USDC_TOKEN_ADDRESS.slice(-4)})
                 </div>
               </div>
 
@@ -299,6 +627,7 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
                   variant="outline"
                   className="border-[#2d3a59] hover:bg-[#192337] text-white rounded-lg h-12"
                   onClick={onClose}
+                  disabled={isMinting}
                 >
                   Cancel
                 </Button>
@@ -309,15 +638,26 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
                       : "bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994]"
                   }`}
                   onClick={handleMint}
-                  disabled={!amount || isExpired}
+                  disabled={!amount || isExpired || !connected || isMinting}
                 >
                   <span
                     className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform translate-x-0 
                     group-hover:translate-x-full bg-gradient-to-r from-white/5 to-transparent"
                   ></span>
                   <span className="relative flex items-center justify-center">
-                    {mintType === "long" ? "Mint VAR LONG" : "Mint VAR SHORT"}
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    {isMinting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Minting...
+                      </>
+                    ) : (
+                      <>
+                        {mintType === "long"
+                          ? "Mint VAR LONG"
+                          : "Mint VAR SHORT"}
+                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
                   </span>
                 </Button>
               </div>
@@ -380,6 +720,13 @@ const MarketDetailsPopup: React.FC<MarketDetailsProps> = ({
                         <div>
                           <div className="text-gray-400">Minted</div>
                           <div className="text-white">{position.mintDate}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Token Used</div>
+                          <div className="text-white flex items-center">
+                            <div className="w-3 h-3 rounded-full mr-1 bg-[#2775CA]"></div>
+                            {position.token}
+                          </div>
                         </div>
                       </div>
                       <div className="mt-3 pt-3 border-t border-[#2d3a59]">
