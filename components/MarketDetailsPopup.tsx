@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
-  DialogContent,
+  DialogContentWithoutCloseButton,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -22,6 +22,7 @@ import {
   CircleDollarSign,
   LayoutGrid,
   Loader2,
+  X,
 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
@@ -555,18 +556,24 @@ const MarketDetailsPopup = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[550px] bg-gradient-to-b from-[#0a1525] to-[#0f1b35] text-white border border-[#2d3a59] shadow-2xl p-0 overflow-hidden rounded-xl">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-24 -right-24 w-[300px] h-[300px] rounded-full bg-[#019E8C]/5 blur-3xl"></div>
-          <div className="absolute -bottom-24 -left-24 w-[300px] h-[300px] rounded-full bg-[#B079B5]/5 blur-3xl"></div>
-        </div>
-
+      <DialogContentWithoutCloseButton className="sm:max-w-[550px] bg-gradient-to-b from-[#0a1525] to-[#0f1b35] text-white border border-[#2d3a59] shadow-2xl p-0 overflow-hidden rounded-xl">
         <DialogHeader className="p-6 border-b border-[#2d3a59] relative z-10">
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">
-              Market Details
-            </DialogTitle>
-            <StatusBadge isExpired={dynamicExpired} />
+          <div className="pr-6 flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300 mb-2">
+                Market Details
+              </DialogTitle>
+              <StatusBadge isExpired={dynamicExpired} />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="absolute top-4 right-4 h-8 w-8 rounded-full bg-[#192337]/80 text-gray-400 hover:text-white hover:bg-[#192337]"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
           </div>
         </DialogHeader>
 
@@ -644,142 +651,194 @@ const MarketDetailsPopup = ({
 
             <TabsContent
               value="mint"
-              className="px-6 pb-6 pt-2 animate-in fade-in-50 slide-in-from-left-5 duration-300"
+              className="px-6 pb-6 pt-2 animate-in fade-in-50 duration-300"
             >
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-white mb-3 flex items-center">
-                  <Wallet className="w-4 h-4 mr-2 text-[#019E8C]" />
-                  Select Position Type
-                </h3>
-                <Tabs
-                  value={mintType}
-                  onValueChange={setMintType}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-2 bg-[#192337] p-1 rounded-lg shadow-inner">
-                    <TabsTrigger
-                      value="long"
-                      className="rounded-md data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#019E8C] data-[state=active]:to-[#018b7c] data-[state=active]:text-white"
-                    >
-                      <ArrowUpRight className="w-4 h-4 mr-2" />
-                      VAR LONG
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="short"
-                      className="rounded-md data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#B079B5] data-[state=active]:to-[#9d6aaa] data-[state=active]:text-white"
-                    >
-                      <ArrowDownRight className="w-4 h-4 mr-2" />
-                      VAR SHORT
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="long" className="mt-4">
-                    <div className="bg-[#192337]/80 rounded-xl p-4 mb-4 border border-[#2d3a59]/50">
-                      <div className="text-sm text-gray-400 mb-1">
-                        Description
-                      </div>
-                      <div className="text-white">
-                        VAR LONG tokens gain value when realized volatility
-                        exceeds the strike of {(strike * 100).toFixed(2)}%.
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="short" className="mt-4">
-                    <div className="bg-[#192337]/80 rounded-xl p-4 mb-4 border border-[#2d3a59]/50">
-                      <div className="text-sm text-gray-400 mb-1">
-                        Description
-                      </div>
-                      <div className="text-white">
-                        VAR SHORT tokens gain value when realized volatility
-                        stays below the strike of {(strike * 100).toFixed(2)}%.
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
+              {dynamicExpired ? (
+                <div className="bg-[#192337]/80 rounded-xl p-6 text-center border border-[#2d3a59]/50 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-[#192337] border border-[#2d3a59] flex items-center justify-center mx-auto mb-3">
+                    <AlertTriangle className="w-6 h-6 text-[#B079B5]" />
+                  </div>
+                  <h4 className="text-white font-medium mb-1">
+                    Market Has Expired
+                  </h4>
+                  <p className="text-gray-400 text-sm mb-4">
+                    This market has expired on {formatExpiry(epoch)}. You can no
+                    longer mint new positions, but you can redeem existing
+                    positions.
+                  </p>
+                  <Button
+                    className="bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
+                    onClick={() => setActiveTab("positions")}
+                  >
+                    View Your Positions
+                  </Button>
+                  <Button
+                    className="mt-2 w-full bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
+                    onClick={() => {
+                      // Logic will be implemented later
+                      console.log("Redeem from expired market");
+                    }}
+                  >
+                    <CircleDollarSign className="w-4 h-4 mr-2" />
+                    Redeem Settlement
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-lg font-medium text-white mb-4 flex items-center">
+                    <Activity className="w-4 h-4 mr-2 text-[#019E8C]" />
+                    Mint VAR {mintType === "long" ? "LONG" : "SHORT"} Position
+                  </h3>
 
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="text-sm text-gray-400">Amount</div>
-                  <div className="text-sm text-gray-400 flex items-center">
-                    Available:{" "}
-                    {isLoadingBalance ? (
-                      <Loader2 className="ml-1 h-3 w-3 animate-spin text-white" />
-                    ) : (
-                      <span className="text-white ml-1">
-                        {connected ? `${usdcBalance} USDC` : "Connect wallet"}
+                  <div className="space-y-4 mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="text-sm text-gray-400 mb-1">
+                          Market Strike
+                        </div>
+                        <div className="text-white font-medium text-lg">
+                          {strike === undefined
+                            ? "N/A"
+                            : `${(strike * 100).toFixed(2)}%`}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm text-gray-400 mb-1">
+                          Expires
+                        </div>
+                        <div className="text-white font-medium text-lg flex items-center">
+                          <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                          {formatExpiry(epoch)}
+                        </div>
+                      </div>
+                      <div className="flex-1 text-right">
+                        <div className="text-sm text-gray-400 mb-1">Status</div>
+                        <StatusBadge isExpired={dynamicExpired} />
+                      </div>
+                    </div>
+
+                    <div className="bg-[#192337]/80 rounded-xl p-4 border border-[#2d3a59]/50">
+                      <h4 className="text-white font-medium mb-3">
+                        Choose Position
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          className={`rounded-lg py-3 h-16 flex flex-col items-center justify-center ${
+                            mintType === "long"
+                              ? "bg-gradient-to-r from-[#019E8C] to-[#018b7c] text-white"
+                              : "bg-[#192337] border border-[#2d3a59] text-gray-300 hover:bg-[#1f293d]"
+                          }`}
+                          onClick={() => setMintType("long")}
+                        >
+                          <ArrowUpRight
+                            className={`h-5 w-5 mb-1 ${
+                              mintType === "long"
+                                ? "text-white"
+                                : "text-[#019E8C]"
+                            }`}
+                          />
+                          <span>VAR LONG</span>
+                        </Button>
+                        <Button
+                          className={`rounded-lg py-3 h-16 flex flex-col items-center justify-center ${
+                            mintType === "short"
+                              ? "bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] text-white"
+                              : "bg-[#192337] border border-[#2d3a59] text-gray-300 hover:bg-[#1f293d]"
+                          }`}
+                          onClick={() => setMintType("short")}
+                        >
+                          <ArrowDownRight
+                            className={`h-5 w-5 mb-1 ${
+                              mintType === "short"
+                                ? "text-white"
+                                : "text-[#B079B5]"
+                            }`}
+                          />
+                          <span>VAR SHORT</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-sm text-gray-400">Amount</div>
+                      <div className="text-sm text-gray-400 flex items-center">
+                        Available:{" "}
+                        {isLoadingBalance ? (
+                          <Loader2 className="ml-1 h-3 w-3 animate-spin text-white" />
+                        ) : (
+                          <span className="text-white ml-1">
+                            {connected
+                              ? `${usdcBalance} USDC`
+                              : "Connect wallet"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="relative flex-1">
+                        <Input
+                          type="text"
+                          placeholder="0.00"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="w-full bg-[#192337] border-[#2d3a59] focus:border-[#019E8C] focus:ring-[#019E8C]/20 text-white px-4 py-3 h-12 rounded-lg shadow-inner"
+                        />
+                        {estimatedValue && (
+                          <div className="absolute -bottom-6 left-0 text-xs text-gray-400">
+                            {estimatedValue}
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-[#192337] border border-[#2d3a59] rounded-lg h-12 px-3 flex items-center shadow-md">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-5 h-5 rounded-full bg-[#2775CA]"></div>
+                          <span className="text-white">USDC</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-[#019E8C]">
+                      Using USDC token ({USDC_TOKEN_ADDRESS.slice(0, 4)}...
+                      {USDC_TOKEN_ADDRESS.slice(-4)})
+                    </div>
+                  </div>
+
+                  <div>
+                    <Button
+                      className={`w-full rounded-lg h-12 group relative overflow-hidden ${
+                        mintType === "long"
+                          ? "bg-gradient-to-r from-[#019E8C] to-[#018b7c] hover:from-[#018b7c] hover:to-[#017a6d]"
+                          : "bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994]"
+                      }`}
+                      onClick={handleMint}
+                      disabled={
+                        !amount || dynamicExpired || !connected || isMinting
+                      }
+                    >
+                      <span
+                        className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform translate-x-0 
+                        group-hover:translate-x-full bg-gradient-to-r from-white/5 to-transparent"
+                      ></span>
+                      <span className="relative flex items-center justify-center">
+                        {isMinting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Minting...
+                          </>
+                        ) : (
+                          <>
+                            {mintType === "long"
+                              ? "Mint VAR LONG"
+                              : "Mint VAR SHORT"}
+                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </>
+                        )}
                       </span>
-                    )}
+                    </Button>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="relative flex-1">
-                    <Input
-                      type="text"
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full bg-[#192337] border-[#2d3a59] focus:border-[#019E8C] focus:ring-[#019E8C]/20 text-white px-4 py-3 h-12 rounded-lg shadow-inner"
-                    />
-                    {estimatedValue && (
-                      <div className="absolute -bottom-6 left-0 text-xs text-gray-400">
-                        {estimatedValue}
-                      </div>
-                    )}
-                  </div>
-                  <div className="bg-[#192337] border border-[#2d3a59] rounded-lg h-12 px-3 flex items-center shadow-md">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 rounded-full bg-[#2775CA]"></div>
-                      <span className="text-white">USDC</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-[#019E8C]">
-                  Using USDC token ({USDC_TOKEN_ADDRESS.slice(0, 4)}...
-                  {USDC_TOKEN_ADDRESS.slice(-4)})
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Button
-                  variant="outline"
-                  className="border-[#2d3a59] hover:bg-[#192337] text-white rounded-lg h-12"
-                  onClick={onClose}
-                  disabled={isMinting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className={`rounded-lg h-12 group relative overflow-hidden ${
-                    mintType === "long"
-                      ? "bg-gradient-to-r from-[#019E8C] to-[#018b7c] hover:from-[#018b7c] hover:to-[#017a6d]"
-                      : "bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994]"
-                  }`}
-                  onClick={handleMint}
-                  disabled={
-                    !amount || dynamicExpired || !connected || isMinting
-                  }
-                >
-                  <span
-                    className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform translate-x-0 
-                    group-hover:translate-x-full bg-gradient-to-r from-white/5 to-transparent"
-                  ></span>
-                  <span className="relative flex items-center justify-center">
-                    {isMinting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Minting...
-                      </>
-                    ) : (
-                      <>
-                        {mintType === "long"
-                          ? "Mint VAR LONG"
-                          : "Mint VAR SHORT"}
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </span>
-                </Button>
-              </div>
+                </>
+              )}
             </TabsContent>
 
             <TabsContent
@@ -868,6 +927,20 @@ const MarketDetailsPopup = ({
                         >
                           View on Explorer
                         </Button>
+
+                        {/* Redemption button for expired markets */}
+                        {dynamicExpired && (
+                          <Button
+                            className="w-full mt-2 bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
+                            onClick={() => {
+                              // Logic will be implemented later
+                              console.log("Redeeming position:", position);
+                            }}
+                          >
+                            <CircleDollarSign className="w-4 h-4 mr-2" />
+                            Redeem Position
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -891,10 +964,33 @@ const MarketDetailsPopup = ({
                   </Button>
                 </div>
               )}
+
+              {connected && userPositions.length === 0 && dynamicExpired && (
+                <div className="mt-4 p-4 border border-[#2d3a59] rounded-lg bg-[#B079B5]/10">
+                  <h4 className="text-white font-medium mb-2 flex items-center">
+                    <CircleDollarSign className="w-4 h-4 mr-2 text-[#B079B5]" />
+                    Market Settlement
+                  </h4>
+                  <p className="text-gray-300 text-sm mb-3">
+                    This market has expired. If you previously held positions,
+                    you can redeem your profit or loss.
+                  </p>
+                  <Button
+                    className="w-full bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
+                    onClick={() => {
+                      // Logic will be implemented later
+                      console.log("Redeem from expired market");
+                    }}
+                  >
+                    <CircleDollarSign className="w-4 h-4 mr-2" />
+                    Redeem Settlement
+                  </Button>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
-      </DialogContent>
+      </DialogContentWithoutCloseButton>
     </Dialog>
   );
 };
