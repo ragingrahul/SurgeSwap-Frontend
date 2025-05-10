@@ -315,7 +315,7 @@ const Markets = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-surge-beige/90 via-white to-surge-beige/80 overflow-hidden">
+    <div className="min-h-screen bg-[#F8F5EE] text-surge-deep-green overflow-hidden">
       <Header />
 
       <main className="relative pt-6">

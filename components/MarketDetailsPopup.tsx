@@ -541,6 +541,130 @@ const MarketDetailsPopup = ({
     }
   };
 
+  // Handle redeem action
+  const handleRedeem = async (position?: {
+    type: string;
+    amount: string;
+    address: string;
+  }) => {
+    if (!connected || !publicKey) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    // If position is provided, log it for debugging
+    if (position) {
+      console.log(
+        `Redeeming ${position.type} position with amount ${position.amount}`
+      );
+    }
+
+    if (!signTransaction) {
+      toast.error("Wallet does not support transaction signing");
+      return;
+    }
+
+    if (!varLongMint || !varShortMint || !usdcVault) {
+      toast.error("Missing token address information");
+      return;
+    }
+
+    try {
+      // Set up loading notification
+      toast.loading("Redeeming tokens...");
+
+      const connection = new Connection(
+        "https://api.devnet.solana.com",
+        "confirmed"
+      );
+
+      // Initialize the Anchor Program
+      const walletAdapter = {
+        publicKey,
+        signTransaction: signTransaction!,
+        signAllTransactions: signAllTransactions!,
+      };
+
+      const provider = new AnchorProvider(connection, walletAdapter, {
+        commitment: "confirmed",
+      });
+      anchor.setProvider(provider);
+
+      // Initialize the program with IDL
+      const program = new Program<SurgeVariance>(
+        idl as SurgeVariance,
+        provider
+      );
+
+      const epochBN = new BN(epoch || "0");
+      const timestampBN = new BN(timestamp || 0);
+
+      // Derive market PDA
+      const [marketPDA, marketBump] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("market"),
+          Buffer.from(epochBN.toArrayLike(Buffer, "le", 8)),
+          Buffer.from(timestampBN.toArrayLike(Buffer, "le", 8)),
+        ],
+        program.programId
+      );
+
+      // Derive user's VAR token accounts
+      const userVarLong = await getAssociatedTokenAddress(
+        new PublicKey(varLongMint),
+        publicKey
+      );
+      const userVarShort = await getAssociatedTokenAddress(
+        new PublicKey(varShortMint),
+        publicKey
+      );
+
+      // Get user's USDC account
+      const userUsdc = await getAssociatedTokenAddress(USDC_MINT, publicKey);
+
+      // Volatility stats PDA from the oracle program
+      const volatilityStats = new PublicKey(
+        "ESgrnS6HnQEGw6cYjZMzDZrpVkr6xQ4Ls9AGTeqEgmVj"
+      );
+
+      const bumps = {
+        market: marketBump,
+      };
+
+      await program.methods
+        .redeem(epochBN, timestampBN, bumps)
+        .accounts({
+          market: marketPDA,
+          userAuthority: publicKey,
+          userUsdc: userUsdc,
+          usdcVault: new PublicKey(usdcVault),
+          varLongMint: new PublicKey(varLongMint),
+          varShortMint: new PublicKey(varShortMint),
+          userVarLong: userVarLong,
+          userVarShort: userVarShort,
+          volatilityStats: volatilityStats,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
+        .rpc();
+
+      // Success notification
+      toast.success("Successfully redeemed tokens");
+
+      // Refresh balances and positions
+      fetchUsdcBalance();
+      fetchUserPositions();
+    } catch (error: unknown) {
+      console.error("Error redeeming tokens:", error);
+      toast.error("Failed to redeem tokens", {
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      toast.dismiss();
+    }
+  };
+
   // Status badge
   const StatusBadge = ({ isExpired }: { isExpired: boolean }) => {
     return isExpired ? (
@@ -674,10 +798,7 @@ const MarketDetailsPopup = ({
                   </Button>
                   <Button
                     className="mt-2 w-full bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
-                    onClick={() => {
-                      // Logic will be implemented later
-                      console.log("Redeem from expired market");
-                    }}
+                    onClick={() => handleRedeem()}
                   >
                     <CircleDollarSign className="w-4 h-4 mr-2" />
                     Redeem Settlement
@@ -932,10 +1053,7 @@ const MarketDetailsPopup = ({
                         {dynamicExpired && (
                           <Button
                             className="w-full mt-2 bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
-                            onClick={() => {
-                              // Logic will be implemented later
-                              console.log("Redeeming position:", position);
-                            }}
+                            onClick={() => handleRedeem(position)}
                           >
                             <CircleDollarSign className="w-4 h-4 mr-2" />
                             Redeem Position
@@ -977,10 +1095,7 @@ const MarketDetailsPopup = ({
                   </p>
                   <Button
                     className="w-full bg-gradient-to-r from-[#B079B5] to-[#9d6aaa] hover:from-[#9d6aaa] hover:to-[#8a5994] text-white"
-                    onClick={() => {
-                      // Logic will be implemented later
-                      console.log("Redeem from expired market");
-                    }}
+                    onClick={() => handleRedeem()}
                   >
                     <CircleDollarSign className="w-4 h-4 mr-2" />
                     Redeem Settlement
