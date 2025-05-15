@@ -30,6 +30,7 @@ module.exports = {
         shimmer: "shimmer 1.5s infinite",
         holographicShimmer: "holographicShimmer 6s linear infinite",
         "pulse-subtle": "pulse-subtle 3s ease-in-out infinite",
+        "pulse-slow": "pulse-slow 4s ease-in-out infinite",
         glow: "glow 2s ease-in-out infinite",
         "spark-vertical": "spark-vertical 2s ease-in-out infinite",
         "spark-horizontal": "spark-horizontal 2s ease-in-out infinite",
@@ -59,6 +60,16 @@ module.exports = {
         "pulse-subtle": {
           "0%, 100%": { opacity: 0.8 },
           "50%": { opacity: 1 },
+        },
+        "pulse-slow": {
+          "0%, 100%": {
+            transform: "scale(1)",
+            boxShadow: "0 0 15px 0px rgba(1, 158, 140, 0.4)",
+          },
+          "50%": {
+            transform: "scale(1.03)",
+            boxShadow: "0 0 30px 5px rgba(176, 121, 181, 0.6)",
+          },
         },
         "spark-vertical": {
           "0%": { height: "0%", opacity: 0.3 },
