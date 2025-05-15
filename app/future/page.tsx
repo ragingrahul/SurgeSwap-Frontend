@@ -1,13 +1,17 @@
+"use client";
+
 import ActivePositionPanel from "@/components/futures/ActivePositionPanel";
 import TradePanel from "@/components/futures/TradePanel";
 import VolatilityCard from "@/components/futures/VolatilityCard";
 import Header from "@/components/Header";
 import React from "react";
+import { Toaster } from "sonner";
 
 function page() {
   return (
     <div className="min-h-screen bg-[#F8F5EE] text-surge-deep-green">
       <Header />
+      <Toaster position="top-right" richColors />
       <div className="container max-w-screen-xl mx-auto py-24 px-4 md:px-8">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-0 right-0 -bottom-8 text-[30vw] font-bold text-[#019e8c]/10 text-center whitespace-nowrap leading-none">

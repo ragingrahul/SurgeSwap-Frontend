@@ -5,6 +5,7 @@ import PhoneMockup from "@/components/PhoneMockup";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Activity } from "lucide-react";
 import VolatilityDisplay from "@/components/VolatilityDisplay";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -28,14 +29,18 @@ export default function Home() {
               </p>
 
               <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6 md:mb-8">
-                <Button className="bg-[#019E8C] hover:bg-[#344B47] text-white rounded-full px-6 py-5 text-base flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Variance Swap
-                </Button>
-                <Button className="rounded-full px-6 py-5 text-base text-white flex items-center gap-2 bg-[#B079B5] hover:bg-[#7B4780]">
-                  <TrendingUp className="w-5 h-5" />
-                  Perpetual Futures
-                </Button>
+                <Link href="/market">
+                  <Button className="bg-[#019E8C] hover:bg-[#344B47] text-white rounded-full px-6 py-5 text-base flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Variance Swap
+                  </Button>
+                </Link>
+                <Link href="/future">
+                  <Button className="rounded-full px-6 py-5 text-base text-white flex items-center gap-2 bg-[#B079B5] hover:bg-[#7B4780]">
+                    <TrendingUp className="w-5 h-5" />
+                    Perpetual Futures
+                  </Button>
+                </Link>
               </div>
 
               <div className="relative w-full max-w-md mx-auto">

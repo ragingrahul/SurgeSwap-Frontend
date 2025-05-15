@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -19,7 +19,11 @@ const Header = () => {
     setMounted(true);
   }, []);
 
-  const navItems = ["Variance Swap", "Perp Futures", "About"];
+  const navItems = [
+    { name: "Home", href: "/" },
+    { name: "Variance Swap", href: "/market" },
+    { name: "Perp Futures", href: "/future" },
+  ];
 
   return (
     <header
@@ -53,18 +57,19 @@ const Header = () => {
         <div className="hidden md:flex items-center justify-center space-x-1">
           {navItems.map((item, i) => (
             <motion.div
-              key={item}
+              key={item.name}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 * i }}
             >
-              <Button
-                variant="ghost"
-                className="font-medium hover:text-surge-teal transition-colors"
-              >
-                {item}
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
+              <Link href={item.href}>
+                <Button
+                  variant="ghost"
+                  className="font-medium hover:text-surge-teal transition-colors"
+                >
+                  {item.name}
+                </Button>
+              </Link>
             </motion.div>
           ))}
         </div>
@@ -108,13 +113,14 @@ const Header = () => {
         >
           <div className="container mx-auto py-4 px-4 flex flex-col space-y-3">
             {navItems.map((item) => (
-              <Button
-                key={item}
-                variant="ghost"
-                className="justify-start font-medium hover:text-surge-teal transition-colors"
-              >
-                {item}
-              </Button>
+              <Link key={item.name} href={item.href} className="w-full">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start font-medium hover:text-surge-teal transition-colors"
+                >
+                  {item.name}
+                </Button>
+              </Link>
             ))}
             <div className="pt-2 border-t border-gray-100">
               {mounted && !connected && (
