@@ -35,10 +35,10 @@ export default function Home() {
                     Variance Swap
                   </Button>
                 </Link>
-                <Link href="/future">
+                <Link href="/etf">
                   <Button className="rounded-full px-6 py-5 text-base text-white flex items-center gap-2 bg-[#B079B5] hover:bg-[#7B4780]">
                     <TrendingUp className="w-5 h-5" />
-                    Perpetual Futures
+                    Volatility ETF
                   </Button>
                 </Link>
               </div>

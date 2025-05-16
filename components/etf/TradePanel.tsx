@@ -45,18 +45,15 @@ type MintTokensAccounts = {
 };
 
 const TradePanel = () => {
-  const [marginValue, setMarginValue] = useState("");
+  const [tokenValue, setTokenValue] = useState("");
   const [direction, setDirection] = useState<"long" | "short">("long");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [positionData, setPositionData] = useState<PositionData | null>(null);
-  const [isDebugMode, setIsDebugMode] = useState(false);
-  const maxMargin = 1000; // Increased max margin from 400 to 1000 USDC
   const { volatility } = useVolatilityEffect();
 
   const { publicKey, wallet } = useWallet();
-  const { fetchPositionData, closePosition, resetPosition } =
-    useSurgePerpsClient();
+  const { fetchPositionData } = useSurgePerpsClient();
 
   const RPC = "https://api.devnet.solana.com";
   const connection = new Connection(RPC, "confirmed");
@@ -111,15 +108,10 @@ const TradePanel = () => {
   // Remove unused program initialization
   anchor.setProvider(provider);
 
-  const handleMarginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numbers
     const value = e.target.value.replace(/[^0-9]/g, "");
-    setMarginValue(value);
-  };
-
-  const setMarginPercentage = (percentage: number) => {
-    const value = Math.floor((maxMargin * percentage) / 100).toString();
-    setMarginValue(value);
+    setTokenValue(value);
   };
 
   const handleDirectionChange = (newDirection: "long" | "short") => {
@@ -139,8 +131,8 @@ const TradePanel = () => {
         return;
       }
 
-      if (!marginValue || parseFloat(marginValue) <= 0) {
-        toast.error("Please enter a valid margin amount");
+      if (!tokenValue || parseFloat(tokenValue) <= 0) {
+        toast.error("Please enter a valid token amount");
         return;
       }
 
@@ -254,8 +246,8 @@ const TradePanel = () => {
         })
       );
 
-      // Convert margin amount to the right format (with 6 decimals for USDC)
-      const mintAmount = new anchor.BN(parseFloat(marginValue) * 1_000_000);
+      // Convert token amount to the right format (with 6 decimals for USDC)
+      const mintAmount = new anchor.BN(parseFloat(tokenValue) * 1_000_000);
 
       /* ---------- Build mint_tokens instruction ---------- */
       toast.info("Creating mint tokens instruction...");
@@ -351,98 +343,8 @@ const TradePanel = () => {
           <div className="bg-white/70 rounded-lg px-3 py-1 text-xs text-surge-deep-green border border-[#D9C9A8]/50">
             {maxLeverage}x Max Leverage
           </div>
-          <button
-            onClick={() => setIsDebugMode(!isDebugMode)}
-            className="bg-gray-500/10 rounded-lg px-2 py-1 text-xs text-gray-600"
-          >
-            {isDebugMode ? "Debug: ON" : "Debug: OFF"}
-          </button>
         </div>
       </div>
-
-      {/* Debug information if enabled */}
-      {isDebugMode && (
-        <div className="mb-4 p-2 bg-gray-700/10 rounded text-xs">
-          <p className="font-mono">
-            Position:{" "}
-            {positionData
-              ? positionData.isActive
-                ? "Active"
-                : "Inactive"
-              : "No data"}
-          </p>
-          <p className="font-mono">
-            Wallet:{" "}
-            {publicKey
-              ? publicKey.toString().substring(0, 8) + "..."
-              : "Not connected"}
-          </p>
-          <div className="mt-2 flex space-x-2">
-            <button
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  // Clear active position (test only)
-                  await closePosition(true);
-                  const data = await fetchPositionData();
-                  setPositionData(data);
-                  toast.success("Position closed successfully");
-                } catch (err) {
-                  console.error("Failed to close position:", err);
-                  toast.error("Failed to close position");
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="bg-yellow-500/80 text-white px-2 py-1 rounded"
-              disabled={!positionData?.isActive}
-            >
-              Close Position
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  // Reset position completely
-                  await resetPosition();
-                  const data = await fetchPositionData();
-                  setPositionData(data);
-                  toast.success("Position reset successfully");
-                } catch (err) {
-                  console.error("Failed to reset position:", err);
-                  toast.error("Failed to reset position");
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="bg-red-500/80 text-white px-2 py-1 rounded"
-            >
-              Reset Position
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  // Only initialize the position account without trying to open/close
-                  toast.info("Initializing position account...");
-                  await resetPosition();
-                  const data = await fetchPositionData();
-                  setPositionData(data);
-                  toast.success("Position account initialized");
-                } catch (err) {
-                  console.error("Failed to initialize position:", err);
-                  toast.error("Failed to initialize position account");
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="bg-blue-500/80 text-white px-2 py-1 rounded"
-            >
-              Initialize Only
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="space-y-5">
         <div>
@@ -492,47 +394,30 @@ const TradePanel = () => {
           </div>
         </div>
 
-        <div>
-          <p className="text-surge-deep-green font-medium mb-2 text-sm">
-            Margin (USDC)
-          </p>
-          <div className="relative">
+        {/* Primary Input Field */}
+        <div className="mb-6">
+          <div className="flex items-center mb-2 text-surge-deep-green">
+            <label className="font-medium">Number of Tokens to Mint</label>
+            {direction === "long" ? (
+              <span className="ml-auto text-[#019E8C] text-sm flex items-center">
+                <TrendingUp className="mr-1 h-3 w-3" /> Long
+              </span>
+            ) : (
+              <span className="ml-auto text-red-500 text-sm flex items-center">
+                <ArrowDownLeft className="mr-1 h-3 w-3" /> Short
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center bg-white/80 rounded-lg border border-[#D9C9A8]/50 p-2 overflow-hidden">
             <Input
               type="text"
-              value={marginValue}
-              onChange={handleMarginChange}
-              placeholder="Enter amount"
-              className="bg-white/70 border-[#D9C9A8]/50 text-surge-deep-green text-right h-10 pr-16 focus:border-[#019E8C]/50"
+              placeholder="0"
+              value={tokenValue}
+              onChange={handleTokenChange}
+              className="border-0 bg-transparent text-xl font-medium focus-visible:ring-0 focus-visible:ring-offset-0"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-              <span className="text-surge-deep-green">USDC</span>
-            </div>
-          </div>
-          <div className="mt-3 flex justify-between gap-3">
-            <button
-              className="text-xs px-2 py-1 bg-white/70 rounded text-surge-deep-green hover:bg-white hover:text-[#019E8C] border border-[#D9C9A8]/50 flex-1 transition-colors"
-              onClick={() => setMarginPercentage(25)}
-            >
-              25%
-            </button>
-            <button
-              className="text-xs px-2 py-1 bg-white/70 rounded text-surge-deep-green hover:bg-white hover:text-[#019E8C] border border-[#D9C9A8]/50 flex-1 transition-colors"
-              onClick={() => setMarginPercentage(50)}
-            >
-              50%
-            </button>
-            <button
-              className="text-xs px-2 py-1 bg-white/70 rounded text-surge-deep-green hover:bg-white hover:text-[#019E8C] border border-[#D9C9A8]/50 flex-1 transition-colors"
-              onClick={() => setMarginPercentage(75)}
-            >
-              75%
-            </button>
-            <button
-              className="text-xs px-2 py-1 bg-white/70 rounded text-surge-deep-green hover:bg-white hover:text-[#019E8C] border border-[#D9C9A8]/50 flex-1 transition-colors"
-              onClick={() => setMarginPercentage(100)}
-            >
-              100%
-            </button>
+            <span className="text-surge-deep-green">vVOL</span>
           </div>
         </div>
 

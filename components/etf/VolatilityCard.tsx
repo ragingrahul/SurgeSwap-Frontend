@@ -15,7 +15,7 @@ const VolatilityCard = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center relative z-10">
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold text-surge-deep-green">
-            Volatility Perp
+            Volatility ETF
           </h2>
         </div>
         <span className="text-lg text-surge-deep-purple mt-2 md:mt-0 font-medium">

@@ -22,7 +22,7 @@ const Header = () => {
   const navItems = [
     { name: "Home", href: "/" },
     { name: "Variance Swap", href: "/market" },
-    { name: "Perp Futures", href: "/future" },
+    { name: "Volatility ETF", href: "/etf" },
   ];
 
   return (
